@@ -1,55 +1,45 @@
 package com.example.liquibase_demo.controller;
 
-import com.example.liquibase_demo.entity.Reaction;
+import com.example.liquibase_demo.dto.ReactionDTO;
 import com.example.liquibase_demo.service.ReactionService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/reactions")
 public class ReactionController {
 
-    @Autowired
-    private ReactionService reactionService;
+    private final ReactionService reactionService;
+
+    public ReactionController(ReactionService reactionService) {
+        this.reactionService = reactionService;
+    }
+
+    @GetMapping
+    public List<ReactionDTO> getAllReactions() {
+        return reactionService.getAllReactions();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ReactionDTO> getReactionById(@PathVariable int id) {
+        return ResponseEntity.ok(reactionService.getReactionById(id));
+    }
 
     @PostMapping
-    public Reaction createReaction(@RequestBody Reaction reaction) {
-        return reactionService.saveReaction(reaction);
+    public ResponseEntity<ReactionDTO> createReaction(@RequestBody ReactionDTO dto) {
+        return ResponseEntity.ok(reactionService.createReaction(dto));
     }
 
-    @GetMapping("/user/{userId}")
-    public List<Reaction> getReactionsByUser(@PathVariable Integer userId) {
-        return reactionService.getReactionsByUserId(userId);
-    }
-
-    @GetMapping("/parent")
-    public List<Reaction> getReactionsByParent(
-            @RequestParam Integer parentId,
-            @RequestParam String parentType) {
-        return reactionService.getReactionsByParent(parentId, parentType);
-    }
-
-    @GetMapping("/check")
-    public Optional<Reaction> getReactionByUserAndParent(
-            @RequestParam Integer userId,
-            @RequestParam Integer parentId,
-            @RequestParam String parentType) {
-        return reactionService.getReactionByUserAndParent(userId, parentId, parentType);
-    }
-
-    @GetMapping("/count")
-    public long countReactionsByType(
-            @RequestParam Integer parentId,
-            @RequestParam String parentType,
-            @RequestParam String reactionType) {
-        return reactionService.countReactionsByType(parentId, parentType, reactionType);
+    @PutMapping("/{id}")
+    public ResponseEntity<ReactionDTO> updateReaction(@PathVariable int id, @RequestBody ReactionDTO dto) {
+        return ResponseEntity.ok(reactionService.updateReaction(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteReaction(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteReaction(@PathVariable int id) {
         reactionService.deleteReaction(id);
+        return ResponseEntity.noContent().build();
     }
 }

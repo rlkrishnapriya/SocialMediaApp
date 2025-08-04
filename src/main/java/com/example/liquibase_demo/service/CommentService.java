@@ -1,6 +1,8 @@
 package com.example.liquibase_demo.service;
 
+import com.example.liquibase_demo.dto.CommentDTO;
 import com.example.liquibase_demo.entity.Comment;
+import com.example.liquibase_demo.entity.User;
 import com.example.liquibase_demo.repository.CommentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -8,48 +10,69 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class CommentService {
 
-    private final CommentRepository commentRepository;
-
     @Autowired
-    public CommentService(CommentRepository commentRepository) {
-        this.commentRepository = commentRepository;
-    }
+    private CommentRepository commentRepository;
 
-    public Comment createComment(Comment comment) {
+    public CommentDTO saveComment(CommentDTO dto) {
+        Comment comment = new Comment();
+
+        User user = new User();
+        user.setId(dto.getUserId());
+        comment.setUser(user);
+
+        comment.setParentId(dto.getParentId());
+        comment.setParentType(dto.getParentType());
+        comment.setCommentText(dto.getComment());
         comment.setCreatedAt(LocalDateTime.now());
-        return commentRepository.save(comment);
+        comment.setUpdatedAt(dto.getUpdatedAt());
+        comment.setDeletedAt(dto.getDeletedAt());
+
+        Comment saved = commentRepository.save(comment);
+        return convertToDTO(saved);
     }
 
-    public Optional<Comment> getCommentById(Integer id) {
-        return commentRepository.findById(id);
+    public CommentDTO updateComment(Integer id, CommentDTO dto) {
+        Optional<Comment> optional = commentRepository.findById(id);
+        if (optional.isEmpty()) throw new RuntimeException("Comment not found");
+
+        Comment comment = optional.get();
+        comment.setCommentText(dto.getComment());
+        comment.setUpdatedAt(LocalDateTime.now());
+        comment.setDeletedAt(dto.getDeletedAt());
+
+        return convertToDTO(commentRepository.save(comment));
     }
 
-    public List<Comment> getCommentsByParent(Integer parentId, String parentType) {
-        return commentRepository.findByParentIdAndParentType(parentId, parentType);
+    public List<CommentDTO> getAllComments() {
+        return commentRepository.findAll()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
-    public List<Comment> getAllComments() {
-        return commentRepository.findAll();
-    }
-
-    public Comment updateComment(Integer id, Comment updated) {
-        Comment existing = commentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Comment not found with id " + id));
-
-        existing.setCommentText(updated.getCommentText());
-        existing.setUpdatedAt(LocalDateTime.now());
-        return commentRepository.save(existing);
+    public Optional<CommentDTO> getCommentById(Integer id) {
+        return commentRepository.findById(id).map(this::convertToDTO);
     }
 
     public void deleteComment(Integer id) {
-        Comment comment = commentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Comment not found with id " + id));
+        commentRepository.deleteById(id);
+    }
 
-        comment.setDeletedAt(LocalDateTime.now());
-        commentRepository.save(comment); // Soft delete
+    private CommentDTO convertToDTO(Comment comment) {
+        return new CommentDTO(
+                comment.getId(),
+                comment.getUser().getId(),
+                comment.getParentId(),
+                comment.getParentType(),
+                comment.getCommentText(),
+                comment.getCreatedAt(),
+                comment.getUpdatedAt(),
+                comment.getDeletedAt()
+        );
     }
 }

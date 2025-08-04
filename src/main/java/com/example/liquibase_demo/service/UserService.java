@@ -1,5 +1,6 @@
 package com.example.liquibase_demo.service;
 
+import com.example.liquibase_demo.dto.UserDTO;
 import com.example.liquibase_demo.entity.User;
 import com.example.liquibase_demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,66 +9,92 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-
-public interface UserService {
-    User createUser(User user);
-    Optional<User> getUserById(Integer id);
-    Optional<User> getUserByUsername(String username);
-    List<User> getAllUsers();
-    User updateUser(Integer id, User user);
-    void deleteUser(Integer id);
-}
+import java.util.stream.Collectors;
 
 @Service
-class UserServiceImpl implements UserService {
-
-    private final UserRepository userRepository;
+public class UserService {
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
+    private UserRepository userRepository;
 
-    @Override
-    public User createUser(User user) {
-        user.setCreatedAt(LocalDateTime.now());
-        return userRepository.save(user);
-    }
-
-    @Override
-    public Optional<User> getUserById(Integer id) {
-        return userRepository.findById(id);
-    }
-
-    @Override
-    public Optional<User> getUserByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    @Override
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
-
-    @Override
-    public User updateUser(Integer id, User updatedUser) {
-        return userRepository.findById(id).map(existingUser -> {
-            existingUser.setUsername(updatedUser.getUsername());
-            existingUser.setFirstName(updatedUser.getFirstName());
-            existingUser.setLastName(updatedUser.getLastName());
-            existingUser.setEmail(updatedUser.getEmail());
-            existingUser.setPassword(updatedUser.getPassword());
-            existingUser.setProfilePicUrl(updatedUser.getProfilePicUrl());
-            existingUser.setUpdatedAt(LocalDateTime.now());
-            return userRepository.save(existingUser);
-        }).orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
-    }
-
-    @Override
-    public void deleteUser(Integer id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found with ID: " + id);
+    public UserDTO signup(UserDTO dto) {
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("Email already registered");
         }
+
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        user.setEmail(dto.getEmail());
+        user.setPassword(dto.getPassword());
+        user.setProfilePicUrl(dto.getProfilePicUrl());
+        user.setCreatedAt(LocalDateTime.now());
+
+        return convertToDTO(userRepository.save(user));
+    }
+
+    public UserDTO login(String email, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (!user.getPassword().equals(password)) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        return convertToDTO(user);
+    }
+
+    public UserDTO createUser(UserDTO dto) {
+        return signup(dto); 
+    }
+
+    public List<UserDTO> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public UserDTO getUserById(Integer id) {
+        return userRepository.findById(id)
+                .map(this::convertToDTO)
+                .orElse(null);
+    }
+
+    public UserDTO updateUser(Integer id, UserDTO dto) {
+        Optional<User> optional = userRepository.findById(id);
+        if (optional.isEmpty()) return null;
+
+        User user = optional.get();
+        user.setUsername(dto.getUsername());
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        user.setEmail(dto.getEmail());
+        user.setPassword(dto.getPassword());
+        user.setProfilePicUrl(dto.getProfilePicUrl());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        return convertToDTO(userRepository.save(user));
+    }
+
+    public boolean deleteUser(Integer id) {
+        if (!userRepository.existsById(id)) return false;
         userRepository.deleteById(id);
+        return true;
+    }
+
+    private UserDTO convertToDTO(User user) {
+        return new UserDTO(
+                user.getId(),
+                user.getUsername(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getPassword(),
+                user.getProfilePicUrl(),
+                user.getCreatedAt(),
+                user.getUpdatedAt(),
+                user.getDeletedAt()
+        );
     }
 }

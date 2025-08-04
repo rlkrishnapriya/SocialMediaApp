@@ -1,47 +1,96 @@
 package com.example.liquibase_demo.service;
 
+import com.example.liquibase_demo.dto.ReactionDTO;
 import com.example.liquibase_demo.entity.Reaction;
 import com.example.liquibase_demo.entity.ReactionType;
+import com.example.liquibase_demo.entity.User;
 import com.example.liquibase_demo.repository.ReactionRepository;
 import com.example.liquibase_demo.repository.ReactionTypeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.liquibase_demo.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ReactionService {
 
-    @Autowired
-    private ReactionRepository reactionRepository;
+    private final ReactionRepository reactionRepository;
+    private final UserRepository userRepository;
+    private final ReactionTypeRepository reactionTypeRepository;
 
-    @Autowired
-    private ReactionTypeRepository reactionTypeRepository;
-
-    public Reaction saveReaction(Reaction reaction) {
-        return reactionRepository.save(reaction);
+    public ReactionService(ReactionRepository reactionRepository,
+                           UserRepository userRepository,
+                           ReactionTypeRepository reactionTypeRepository) {
+        this.reactionRepository = reactionRepository;
+        this.userRepository = userRepository;
+        this.reactionTypeRepository = reactionTypeRepository;
     }
 
-    public List<Reaction> getReactionsByUserId(Integer userId) {
-        return reactionRepository.findByUserId(userId);
+    public List<ReactionDTO> getAllReactions() {
+        return reactionRepository.findAll()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
-    public List<Reaction> getReactionsByParent(Integer parentId, String parentType) {
-        return reactionRepository.findByParentIdAndParentType(parentId, parentType);
+    public ReactionDTO getReactionById(int id) {
+        Reaction reaction = reactionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Reaction not found with id " + id));
+        return convertToDTO(reaction);
     }
 
-    public Optional<Reaction> getReactionByUserAndParent(Integer userId, Integer parentId, String parentType) {
-        return reactionRepository.findByUserIdAndParentIdAndParentType(userId, parentId, parentType);
+    public ReactionDTO createReaction(ReactionDTO dto) {
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        ReactionType reactionType = reactionTypeRepository.findById(dto.getReactionTypeId())
+                .orElseThrow(() -> new EntityNotFoundException("ReactionType not found"));
+
+        Reaction reaction = new Reaction();
+        reaction.setUser(user);
+        reaction.setParentId(dto.getPostId());
+        reaction.setParentType(dto.getParentType());
+        reaction.setReactionType(reactionType);
+        reaction.setCreatedAt(dto.getCreatedAt());
+
+        Reaction saved = reactionRepository.save(reaction);
+        return convertToDTO(saved);
     }
 
-    public long countReactionsByType(Integer parentId, String parentType, String reactionTypeName) {
-        Optional<ReactionType> type = reactionTypeRepository.findByType(reactionTypeName);
-        return type.map(rt -> reactionRepository.countByParentIdAndParentTypeAndReactionType(parentId, parentType, rt))
-                   .orElse(0L);
+    public ReactionDTO updateReaction(int id, ReactionDTO dto) {
+        Reaction reaction = reactionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Reaction not found"));
+
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        ReactionType reactionType = reactionTypeRepository.findById(dto.getReactionTypeId())
+                .orElseThrow(() -> new EntityNotFoundException("ReactionType not found"));
+
+        reaction.setUser(user);
+        reaction.setParentId(dto.getPostId());
+        reaction.setParentType(dto.getParentType());
+        reaction.setReactionType(reactionType);
+        reaction.setCreatedAt(dto.getCreatedAt());
+
+        Reaction updated = reactionRepository.save(reaction);
+        return convertToDTO(updated);
     }
 
-    public void deleteReaction(Integer id) {
+    public void deleteReaction(int id) {
         reactionRepository.deleteById(id);
+    }
+
+    private ReactionDTO convertToDTO(Reaction reaction) {
+        ReactionDTO dto = new ReactionDTO();
+        dto.setId(reaction.getId());
+        dto.setUserId(reaction.getUser().getId());
+        dto.setPostId(reaction.getParentId());
+        dto.setParentType(reaction.getParentType());
+        dto.setReactionTypeId(reaction.getReactionType().getId());
+        dto.setCreatedAt(reaction.getCreatedAt());
+        return dto;
     }
 }

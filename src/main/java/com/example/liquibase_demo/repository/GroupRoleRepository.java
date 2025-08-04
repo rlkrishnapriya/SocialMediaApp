@@ -9,7 +9,7 @@ import java.util.Optional;
 @Repository
 public interface GroupRoleRepository extends JpaRepository<GroupRole, Integer> {
 
-    Optional<GroupRole> findByName(String name);
+    Optional<GroupRole> findByRole(String role);
 
-    boolean existsByName(String name);
+    boolean existsByRole(String role);
 }

@@ -1,0 +1,22 @@
+package com.example.liquibase_demo.config;
+
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.Map;
+
+@Configuration
+public class CloudinaryConfig {
+
+    @Bean
+    public Cloudinary cloudinary() {
+        return new Cloudinary(ObjectUtils.asMap(
+            "cloud_name", "du5ve5hgh",
+            "api_key", "846162191436962",
+            "api_secret", "Lqrh4U-5QHYbp5AcPuOL-KVfIUI",
+            "secure", true
+        ));
+    }
+}

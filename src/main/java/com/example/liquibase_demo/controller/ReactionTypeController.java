@@ -1,9 +1,8 @@
 package com.example.liquibase_demo.controller;
 
-import com.example.liquibase_demo.entity.ReactionType;
+import com.example.liquibase_demo.dto.ReactionTypeDTO;
 import com.example.liquibase_demo.service.ReactionTypeService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,20 +15,27 @@ public class ReactionTypeController {
     private ReactionTypeService reactionTypeService;
 
     @PostMapping
-    public ResponseEntity<ReactionType> createReactionType(@RequestParam String type) {
-        ReactionType reactionType = reactionTypeService.createReactionType(type);
-        return ResponseEntity.ok(reactionType);
+    public ReactionTypeDTO createReactionType(@RequestBody ReactionTypeDTO dto) {
+        return reactionTypeService.createReactionType(dto);
     }
 
     @GetMapping
-    public ResponseEntity<List<ReactionType>> getAllReactionTypes() {
-        return ResponseEntity.ok(reactionTypeService.getAllReactionTypes());
+    public List<ReactionTypeDTO> getAllReactionTypes() {
+        return reactionTypeService.getAllReactionTypes();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ReactionType> getReactionTypeById(@PathVariable Integer id) {
-        return reactionTypeService.getReactionTypeById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ReactionTypeDTO getReactionTypeById(@PathVariable Integer id) {
+        return reactionTypeService.getReactionTypeById(id);
+    }
+
+    @PutMapping("/{id}")
+    public ReactionTypeDTO updateReactionType(@PathVariable Integer id, @RequestBody ReactionTypeDTO dto) {
+        return reactionTypeService.updateReactionType(id, dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteReactionType(@PathVariable Integer id) {
+        reactionTypeService.deleteReactionType(id);
     }
 }
